@@ -3,7 +3,7 @@ import { action, globalFlags, makeClient } from '../context.js';
 import { asRows, printJson, printObject, printTable } from '../output.js';
 
 const CALL_COLUMNS: [string, string][] = [
-  ['uuid', 'UUID'],
+  ['call_uuid', 'UUID'],
   ['status', 'STATUS'],
   ['to_number', 'TO'],
   ['from_number', 'FROM'],
