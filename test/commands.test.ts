@@ -2,7 +2,8 @@ import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { buildProgram } from '../src/cli.js';
+import { readFileSync } from 'node:fs';
+import { VERSION, buildProgram } from '../src/cli.js';
 
 interface Capture {
   request?: Request;
@@ -69,6 +70,17 @@ afterEach(() => {
   process.env.HOME = priorHome;
   process.env.USERPROFILE = priorProfile;
   rmSync(home, { recursive: true, force: true });
+});
+
+describe('--version', () => {
+  it('reports the version in package.json, not a stale copy', async () => {
+    // `npm version` edits only the manifest, so a hardcoded constant here would
+    // ship the previous release's number forever. It did once.
+    const manifest = JSON.parse(
+      readFileSync(new URL('../package.json', import.meta.url), 'utf8'),
+    ) as { version: string };
+    expect(VERSION).toBe(manifest.version);
+  });
 });
 
 describe('calls create', () => {

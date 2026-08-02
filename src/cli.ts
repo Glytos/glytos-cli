@@ -9,6 +9,7 @@
  */
 
 import { realpathSync } from 'node:fs';
+import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
 import { Command } from 'commander';
 import { registerAuth } from './commands/auth.js';
@@ -20,7 +21,12 @@ import { registerCampaigns } from './commands/campaigns.js';
 import { registerSessions } from './commands/sessions.js';
 import { registerWebhooks } from './commands/webhooks.js';
 
-export const VERSION = '0.1.0';
+// Read from the manifest rather than repeating it here: `npm version` only edits
+// package.json, so a constant silently reports the previous release forever.
+// Resolves the same from src/ and from dist/, both one level under the manifest.
+export const VERSION = (
+  createRequire(import.meta.url)('../package.json') as { version: string }
+).version;
 
 export function buildProgram(): Command {
   const program = new Command();
