@@ -13,6 +13,7 @@ import { fileURLToPath } from 'node:url';
 import { Command } from 'commander';
 import { registerAuth } from './commands/auth.js';
 import { registerAgents } from './commands/agents.js';
+import { registerChat } from './commands/chat.js';
 import { registerCalls } from './commands/calls.js';
 import { registerNumbers } from './commands/numbers.js';
 import { registerCampaigns } from './commands/campaigns.js';
@@ -36,6 +37,7 @@ export function buildProgram(): Command {
 
   registerAuth(program);
   registerAgents(program);
+  registerChat(program);
   registerCalls(program);
   registerNumbers(program);
   registerCampaigns(program);

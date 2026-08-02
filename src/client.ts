@@ -69,6 +69,52 @@ class Workflows {
   }
 }
 
+/** One event from a streamed turn. */
+export type StreamEvent =
+  | { type: 'token'; delta: string }
+  | { type: 'done'; run: Record<string, unknown> }
+  | { type: 'error'; message: string };
+
+/** A conversation with a text agent: a thread holds it, a run is one turn on it. */
+class Threads {
+  constructor(private readonly client: GlytosClient) {}
+
+  create(agent: string, variables?: Record<string, unknown>): Promise<unknown> {
+    return this.client.request('POST', `/workflows/${enc(agent)}/sessions`, {
+      body: variables ? { variables } : {},
+    });
+  }
+
+  retrieve(agent: string, id: string): Promise<unknown> {
+    return this.client.request('GET', `/workflows/${enc(agent)}/sessions/${enc(id)}`);
+  }
+
+  send(agent: string, id: string, content: string, instructions?: string): Promise<unknown> {
+    return this.client.request('POST', `/workflows/${enc(agent)}/sessions/${enc(id)}/messages`, {
+      body: turnBody(content, instructions),
+    });
+  }
+
+  stream(
+    agent: string,
+    id: string,
+    content: string,
+    instructions?: string,
+  ): AsyncGenerator<StreamEvent, void, undefined> {
+    return this.client.stream(
+      'POST',
+      `/workflows/${enc(agent)}/sessions/${enc(id)}/messages/stream`,
+      turnBody(content, instructions),
+    );
+  }
+}
+
+function turnBody(content: string, instructions?: string): Record<string, unknown> {
+  const body: Record<string, unknown> = { content };
+  if (instructions) body.additional_instructions = instructions;
+  return body;
+}
+
 class Calls {
   constructor(private readonly client: GlytosClient) {}
 
@@ -143,6 +189,7 @@ class Webhooks {
 
 export class GlytosClient {
   readonly workflows: Workflows;
+  readonly threads: Threads;
   readonly calls: Calls;
   readonly phoneNumbers: PhoneNumbers;
   readonly campaigns: Campaigns;
@@ -166,6 +213,7 @@ export class GlytosClient {
     this.fetchImpl = fetchImpl;
 
     this.workflows = new Workflows(this);
+    this.threads = new Threads(this);
     this.calls = new Calls(this);
     this.phoneNumbers = new PhoneNumbers(this);
     this.campaigns = new Campaigns(this);
@@ -216,6 +264,73 @@ export class GlytosClient {
     }
     return data as T;
   }
+
+  /**
+   * Stream a Server-Sent Events endpoint, yielding one parsed event at a time, so
+   * a long reply prints as it is written instead of after the last token.
+   */
+  async *stream(
+    method: string,
+    path: string,
+    body?: unknown,
+  ): AsyncGenerator<StreamEvent, void, undefined> {
+    const headers: Record<string, string> = {
+      'X-API-Key': this.apiKey,
+      Accept: 'text/event-stream',
+    };
+    if (this.environment) headers['X-Environment-Id'] = this.environment;
+    const init: RequestInit = { method, headers };
+    if (body !== undefined) {
+      headers['Content-Type'] = 'application/json';
+      init.body = JSON.stringify(body);
+    }
+
+    const response = await this.fetchImpl(this.baseUrl + path, init);
+    if (!response.ok) {
+      const text = await response.text();
+      const error = (safeParse(text) as { error?: { code?: string; message?: string } } | undefined)
+        ?.error;
+      throw new GlytosError(
+        response.status,
+        error?.code ?? 'error',
+        error?.message ?? (response.statusText || 'Request failed'),
+        response.headers.get('x-request-id') ?? undefined,
+      );
+    }
+    if (!response.body) return;
+
+    const decoder = new TextDecoder();
+    let buffer = '';
+    for await (const chunk of response.body) {
+      buffer += typeof chunk === 'string' ? chunk : decoder.decode(chunk, { stream: true });
+      let split = buffer.indexOf('\n\n');
+      while (split !== -1) {
+        const event = parseSse(buffer.slice(0, split));
+        if (event) yield event;
+        buffer = buffer.slice(split + 2);
+        split = buffer.indexOf('\n\n');
+      }
+    }
+    // A stream that ends without a trailing blank line still has one event to give.
+    const last = parseSse(buffer);
+    if (last) yield last;
+  }
+}
+
+/** Turn one raw SSE block (`event: x` then `data: {...}`) into a typed event. */
+function parseSse(block: string): StreamEvent | null {
+  let name = '';
+  const dataLines: string[] = [];
+  for (const line of block.split('\n')) {
+    if (line.startsWith('event:')) name = line.slice(6).trim();
+    else if (line.startsWith('data:')) dataLines.push(line.slice(5).trim());
+  }
+  if (!name || dataLines.length === 0) return null;
+  const data = safeParse(dataLines.join('\n')) as Record<string, unknown>;
+  if (name === 'token') return { type: 'token', delta: String(data?.delta ?? '') };
+  if (name === 'error') return { type: 'error', message: String(data?.message ?? 'stream failed') };
+  if (name === 'done') return { type: 'done', run: data ?? {} };
+  return null;
 }
 
 function safeParse(text: string): unknown {

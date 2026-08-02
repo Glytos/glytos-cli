@@ -70,6 +70,20 @@ glytos agents publish <uuid>
 glytos agents delete <uuid>
 ```
 
+### Chat
+
+Talk to a text agent from the terminal. The reply streams in as it is written:
+
+```bash
+glytos chat <agent-uuid>                          # interactive; /exit to leave
+glytos chat <agent-uuid> -m "What are your hours?"  # one message and out
+glytos chat <agent-uuid> -m "Rate this" --instructions "Score 1-5, reply as JSON."
+glytos chat <agent-uuid> -m "again" --session <session-uuid>   # continue one
+glytos chat <agent-uuid> -m "hi" --no-stream --json            # full reply as JSON
+```
+
+`--instructions` applies to that run only and is never saved to the agent.
+
 ### Calls
 
 ```bash
