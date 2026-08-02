@@ -1,12 +1,17 @@
 {
   "name": "@glytos/cli",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Official command-line interface for the Glytos voice-AI platform.",
   "type": "module",
   "bin": {
     "glytos": "dist/cli.js"
   },
-  "files": ["dist", "src", "README.md", "LICENSE"],
+  "files": [
+    "dist",
+    "src",
+    "README.md",
+    "LICENSE"
+  ],
   "engines": {
     "node": ">=18"
   },
@@ -16,7 +21,14 @@
     "test": "vitest run",
     "prepublishOnly": "npm run build"
   },
-  "keywords": ["glytos", "voice", "ai", "agent", "cli", "api"],
+  "keywords": [
+    "glytos",
+    "voice",
+    "ai",
+    "agent",
+    "cli",
+    "api"
+  ],
   "author": "Glytos",
   "license": "MIT",
   "homepage": "https://glytos.com",
