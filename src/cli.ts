@@ -18,6 +18,7 @@ import { registerChat } from './commands/chat.js';
 import { registerCalls } from './commands/calls.js';
 import { registerNumbers } from './commands/numbers.js';
 import { registerCampaigns } from './commands/campaigns.js';
+import { registerDnc } from './commands/dnc.js';
 import { registerSessions } from './commands/sessions.js';
 import { registerWebhooks } from './commands/webhooks.js';
 
@@ -47,6 +48,7 @@ export function buildProgram(): Command {
   registerCalls(program);
   registerNumbers(program);
   registerCampaigns(program);
+  registerDnc(program);
   registerSessions(program);
   registerWebhooks(program);
 

@@ -105,8 +105,39 @@ glytos numbers release <uuid>
 
 ```bash
 glytos campaigns list
-glytos campaigns create --name "July outreach" --agent <uuid> --from +15551234567
+glytos campaigns create --name "July outreach" --agent <uuid> --from +15551234567 \
+  --contacts-file leads.csv --window 09:00-20:00 --timezone Europe/Istanbul
+glytos campaigns show <uuid>          # every contact and what became of it
 glytos campaigns start <uuid>
+glytos campaigns stop <uuid>          # ends at the next contact; the rest stay ready
+glytos campaigns add-contacts <uuid> --file more-leads.csv
+glytos campaigns delete <uuid>
+```
+
+`--from` must be a number you have already connected. The phone column in the CSV
+is found by its header or by which column holds phone numbers; every other column
+travels with that contact, so `{{name}}` in the agent's prompt means the person
+being called. Add `--schedule 2026-03-01T09:00:00Z` to start in the future.
+
+### Do not call
+
+Every outbound call is checked against this list first, campaigns and
+`glytos calls create` alike. Agents add to it themselves when someone asks not to
+be contacted again.
+
+```bash
+glytos dnc list --search 0555
+glytos dnc add +15551234567 --reason "asked on a call"
+glytos dnc import --file suppressed.txt      # one number per line
+glytos dnc scope +15551234567 marketing      # still allow transactional calls
+glytos dnc remove +15551234567
+```
+
+A campaign can narrow how much of the list applies with `--suppression
+transactional` or `--suppression ignore`. Measure it first:
+
+```bash
+glytos campaigns preview-suppression --file leads.csv
 ```
 
 ### Sessions and logs

@@ -2,7 +2,7 @@ import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { readFileSync } from 'node:fs';
+import { readFileSync, writeFileSync } from 'node:fs';
 import { VERSION, buildProgram } from '../src/cli.js';
 
 interface Capture {
@@ -138,6 +138,144 @@ describe('numbers search', () => {
     expect(url.pathname).toMatch(/\/telephony\/numbers\/search$/);
     expect(url.searchParams.get('country')).toBe('US');
     expect(url.searchParams.get('area_code')).toBe('415');
+  });
+});
+
+describe('campaigns', () => {
+  it('reads a contact list from a CSV file', async () => {
+    const csv = join(home, 'leads.csv');
+    writeFileSync(csv, 'phone,name\n+15550003333,Ada\n', 'utf8');
+
+    const { capture } = await run(
+      [
+        'campaigns',
+        'create',
+        '--name',
+        'March',
+        '--agent',
+        'wf_1',
+        '--from',
+        '+15550002222',
+        '--contacts-file',
+        csv,
+        '--json',
+      ],
+      '{"uuid":"camp_1"}',
+    );
+
+    expect(new URL(capture.request!.url).pathname).toMatch(/\/telephony\/campaigns$/);
+    expect(await capture.request!.json()).toEqual({
+      name: 'March',
+      workflow_uuid: 'wf_1',
+      from_number: '+15550002222',
+      contacts_csv: 'phone,name\n+15550003333,Ada\n',
+    });
+  });
+
+  it('sends --contacts as plain numbers, not objects', async () => {
+    // The API takes a list of strings; the old --contacts flag took JSON
+    // objects, which are rejected with a 422.
+    const { capture } = await run(
+      [
+        'campaigns',
+        'create',
+        '--name',
+        'March',
+        '--agent',
+        'wf_1',
+        '--from',
+        '+15550002222',
+        '--contacts',
+        '+15550003333, +15550004444',
+        '--json',
+      ],
+      '{"uuid":"camp_1"}',
+    );
+
+    expect(await capture.request!.json()).toMatchObject({
+      contacts: ['+15550003333', '+15550004444'],
+    });
+  });
+
+  it('splits --window into the two call-window fields', async () => {
+    const { capture } = await run(
+      [
+        'campaigns',
+        'create',
+        '--name',
+        'March',
+        '--agent',
+        'wf_1',
+        '--from',
+        '+15550002222',
+        '--window',
+        '09:00-20:00',
+        '--timezone',
+        'Europe/Istanbul',
+        '--json',
+      ],
+      '{"uuid":"camp_1"}',
+    );
+
+    expect(await capture.request!.json()).toMatchObject({
+      call_window_start: '09:00',
+      call_window_end: '20:00',
+      timezone: 'Europe/Istanbul',
+    });
+  });
+
+  it('stop posts to the campaign', async () => {
+    const { capture } = await run(
+      ['campaigns', 'stop', 'camp_1', '--json'],
+      '{"uuid":"camp_1","status":"stopped"}',
+    );
+    expect(capture.request?.method).toBe('POST');
+    expect(new URL(capture.request!.url).pathname).toMatch(/\/telephony\/campaigns\/camp_1\/stop$/);
+  });
+});
+
+describe('dnc', () => {
+  it('add posts the number and the reason', async () => {
+    const { capture } = await run(
+      ['dnc', 'add', '+15550003333', '--reason', 'asked on a call', '--json'],
+      '{"uuid":"d1","phone":"+15550003333"}',
+    );
+    expect(capture.request?.method).toBe('POST');
+    expect(new URL(capture.request!.url).pathname).toMatch(/\/dnc$/);
+    expect(await capture.request!.json()).toEqual({
+      phone: '+15550003333',
+      reason: 'asked on a call',
+    });
+  });
+
+  it('list renders the entries out of the page envelope', async () => {
+    const { out } = await run(
+      ['dnc', 'list'],
+      '{"items":[{"uuid":"d1","phone":"+15550003333","source":"agent","scope":"all"}],"total":1}',
+    );
+    expect(out).toContain('PHONE');
+    expect(out).toContain('+15550003333');
+    expect(out).toContain('agent');
+  });
+
+  it('import reads one number per line, skipping blanks and comments', async () => {
+    const list = join(home, 'suppressed.txt');
+    writeFileSync(list, '# from the CRM\n+15550003333\n\n +15550004444 \n', 'utf8');
+
+    const { capture } = await run(
+      ['dnc', 'import', '--file', list, '--json'],
+      '{"added":2,"duplicates":0,"rejected":0}',
+    );
+
+    expect(new URL(capture.request!.url).pathname).toMatch(/\/dnc\/import$/);
+    expect(await capture.request!.json()).toEqual({
+      phones: ['+15550003333', '+15550004444'],
+    });
+  });
+
+  it('scope refuses a value the API does not accept', async () => {
+    const { exitCode } = await run(['dnc', 'scope', '+15550003333', 'sometimes'], '{}');
+    expect(exitCode).toBe(1);
   });
 });
 

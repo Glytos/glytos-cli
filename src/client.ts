@@ -162,8 +162,52 @@ class Campaigns {
     return this.client.request('POST', '/telephony/campaigns', { body });
   }
 
+  retrieve(uuid: string): Promise<unknown> {
+    return this.client.request('GET', `/telephony/campaigns/${enc(uuid)}`);
+  }
+
   start(uuid: string): Promise<unknown> {
     return this.client.request('POST', `/telephony/campaigns/${enc(uuid)}/start`);
+  }
+
+  stop(uuid: string): Promise<unknown> {
+    return this.client.request('POST', `/telephony/campaigns/${enc(uuid)}/stop`);
+  }
+
+  delete(uuid: string): Promise<unknown> {
+    return this.client.request('DELETE', `/telephony/campaigns/${enc(uuid)}`);
+  }
+
+  addContacts(uuid: string, body: Record<string, unknown>): Promise<unknown> {
+    return this.client.request('POST', `/telephony/campaigns/${enc(uuid)}/contacts/sync`, { body });
+  }
+
+  previewSuppression(body: Record<string, unknown>): Promise<unknown> {
+    return this.client.request('POST', '/telephony/campaigns/suppression-preview', { body });
+  }
+}
+
+class Dnc {
+  constructor(private readonly client: GlytosClient) {}
+
+  list(query?: Query): Promise<unknown> {
+    return this.client.request('GET', '/dnc', { query });
+  }
+
+  add(body: Record<string, unknown>): Promise<unknown> {
+    return this.client.request('POST', '/dnc', { body });
+  }
+
+  import(body: Record<string, unknown>): Promise<unknown> {
+    return this.client.request('POST', '/dnc/import', { body });
+  }
+
+  setScope(phone: string, scope: string): Promise<unknown> {
+    return this.client.request('PATCH', `/dnc/${enc(phone)}`, { body: { scope } });
+  }
+
+  remove(phone: string): Promise<unknown> {
+    return this.client.request('DELETE', `/dnc/${enc(phone)}`);
   }
 }
 
@@ -193,6 +237,7 @@ export class GlytosClient {
   readonly calls: Calls;
   readonly phoneNumbers: PhoneNumbers;
   readonly campaigns: Campaigns;
+  readonly dnc: Dnc;
   readonly sessions: Sessions;
   readonly webhooks: Webhooks;
 
@@ -217,6 +262,7 @@ export class GlytosClient {
     this.calls = new Calls(this);
     this.phoneNumbers = new PhoneNumbers(this);
     this.campaigns = new Campaigns(this);
+    this.dnc = new Dnc(this);
     this.sessions = new Sessions(this);
     this.webhooks = new Webhooks(this);
   }
