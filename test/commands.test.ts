@@ -248,6 +248,13 @@ describe('dnc', () => {
     });
   });
 
+  it('omits an unstated reason rather than sending null', async () => {
+    // The reason is a plain string server-side, not a nullable one, so a null
+    // is a 422 rather than "no reason given".
+    const { capture } = await run(['dnc', 'add', '+15550003333', '--json'], '{"uuid":"d1"}');
+    expect(await capture.request!.json()).toEqual({ phone: '+15550003333' });
+  });
+
   it('list renders the entries out of the page envelope', async () => {
     const { out } = await run(
       ['dnc', 'list'],
