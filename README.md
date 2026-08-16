@@ -154,6 +154,32 @@ glytos webhooks list
 glytos webhooks create --url https://hooks.example.com/glytos --events call.completed,call.failed
 ```
 
+### Test suites
+
+Replay saved conversations against an agent to catch prompt regressions. `run`
+exits non-zero when a case fails, so it can gate a pipeline:
+
+```bash
+glytos suites list
+glytos suites run <suite-uuid>
+```
+
+Running the suite runs the agent, so it spends credit.
+
+### Account and carriers
+
+```bash
+glytos balance                  # credit balance
+glytos usage                    # aggregate usage and cost
+glytos trunks list              # SIP trunks and their registration state
+glytos trunks test <trunk-uuid> # re-check one against its carrier now
+```
+
+`trunks test` reports whether the carrier answered at all, separately from
+whether the trunk works. A carrier that refused the credentials is a different
+problem from one that never replied, and only the first is worth a new password.
+It also exits non-zero when the trunk is not usable.
+
 ## JSON output
 
 Every command supports `--json` for scripting:

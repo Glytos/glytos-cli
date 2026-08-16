@@ -299,3 +299,49 @@ describe('webhooks create', () => {
     });
   });
 });
+
+describe('suites run', () => {
+  it('exits non-zero when a case fails, so it can gate a pipeline', async () => {
+    const { capture, exitCode, out } = await run(
+      ['suites', 'run', 's1'],
+      '{"suite_uuid":"s1","passed":false,"total":3,"passed_count":2,"results":[]}',
+    );
+
+    expect(capture.request?.method).toBe('POST');
+    expect(new URL(capture.request!.url).pathname).toMatch(/\/test-suites\/s1\/run$/);
+    expect(out).toContain('2 of 3');
+    // Running the suite succeeded; the non-zero code is the verdict, not an error.
+    expect(exitCode).toBe(1);
+  });
+
+  it('leaves the exit code alone when every case passes', async () => {
+    const { exitCode } = await run(
+      ['suites', 'run', 's1'],
+      '{"suite_uuid":"s1","passed":true,"total":3,"passed_count":3,"results":[]}',
+    );
+
+    expect(exitCode).toBeUndefined();
+  });
+});
+
+describe('balance', () => {
+  it('prints the balance and its currency', async () => {
+    const { capture, out } = await run(['balance'], '{"balance":12.5,"currency":"USD"}');
+
+    expect(new URL(capture.request!.url).pathname).toMatch(/\/billing\/credits$/);
+    expect(out).toContain('12.5 USD');
+  });
+});
+
+describe('trunks test', () => {
+  it('says when the carrier never answered, not just that it failed', async () => {
+    const { capture, out, exitCode } = await run(
+      ['trunks', 'test', 'trunk_1'],
+      '{"ok":false,"detail":"no reply","reachable":false}',
+    );
+
+    expect(new URL(capture.request!.url).pathname).toMatch(/\/telephony\/sip-trunks\/trunk_1\/test$/);
+    expect(out).toContain('carrier did not answer');
+    expect(exitCode).toBe(1);
+  });
+});

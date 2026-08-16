@@ -4,6 +4,24 @@ All notable changes to this project are documented in this file. The format is b
 on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres
 to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- `glytos suites list` and `glytos suites run <uuid>` - replay saved
+  conversations against an agent. `run` exits non-zero when a case fails, so a
+  pipeline can gate on it; the results are printed first either way.
+- `glytos balance` and `glytos usage` - the credit balance and the aggregate,
+  without piping a raw request through `jq`.
+- `glytos trunks list` and `glytos trunks test <uuid>` - SIP trunk registration
+  state, and re-checking one against its carrier. `test` reports whether the
+  carrier answered at all, separately from whether the trunk works, and exits
+  non-zero when it does not.
+
+The rest of the API surface is deliberately not mirrored here: the SDKs cover it,
+and a command line is the wrong shape for editing integration credentials or
+automation templates.
+
 ## [0.3.0] - 2026-08-09
 
 ### Added

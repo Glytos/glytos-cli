@@ -231,6 +231,42 @@ class Webhooks {
   }
 }
 
+class TestSuites {
+  constructor(private readonly client: GlytosClient) {}
+
+  list(): Promise<unknown> {
+    return this.client.request('GET', '/test-suites');
+  }
+
+  run(suiteUuid: string): Promise<unknown> {
+    return this.client.request('POST', `/test-suites/${enc(suiteUuid)}/run`);
+  }
+}
+
+class Billing {
+  constructor(private readonly client: GlytosClient) {}
+
+  credits(): Promise<unknown> {
+    return this.client.request('GET', '/billing/credits');
+  }
+
+  usage(): Promise<unknown> {
+    return this.client.request('GET', '/billing/usage');
+  }
+}
+
+class SipTrunks {
+  constructor(private readonly client: GlytosClient) {}
+
+  list(): Promise<unknown> {
+    return this.client.request('GET', '/telephony/sip-trunks');
+  }
+
+  test(trunkUuid: string): Promise<unknown> {
+    return this.client.request('POST', `/telephony/sip-trunks/${enc(trunkUuid)}/test`);
+  }
+}
+
 export class GlytosClient {
   readonly workflows: Workflows;
   readonly threads: Threads;
@@ -240,6 +276,9 @@ export class GlytosClient {
   readonly dnc: Dnc;
   readonly sessions: Sessions;
   readonly webhooks: Webhooks;
+  readonly testSuites: TestSuites;
+  readonly billing: Billing;
+  readonly sipTrunks: SipTrunks;
 
   private readonly apiKey: string;
   private readonly baseUrl: string;
@@ -265,6 +304,9 @@ export class GlytosClient {
     this.dnc = new Dnc(this);
     this.sessions = new Sessions(this);
     this.webhooks = new Webhooks(this);
+    this.testSuites = new TestSuites(this);
+    this.billing = new Billing(this);
+    this.sipTrunks = new SipTrunks(this);
   }
 
   /**

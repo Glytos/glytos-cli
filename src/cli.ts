@@ -21,6 +21,8 @@ import { registerCampaigns } from './commands/campaigns.js';
 import { registerDnc } from './commands/dnc.js';
 import { registerSessions } from './commands/sessions.js';
 import { registerWebhooks } from './commands/webhooks.js';
+import { registerSuites } from './commands/suites.js';
+import { registerAccount } from './commands/account.js';
 
 // Read from the manifest rather than repeating it here: `npm version` only edits
 // package.json, so a constant silently reports the previous release forever.
@@ -51,6 +53,8 @@ export function buildProgram(): Command {
   registerDnc(program);
   registerSessions(program);
   registerWebhooks(program);
+  registerSuites(program);
+  registerAccount(program);
 
   return program;
 }
