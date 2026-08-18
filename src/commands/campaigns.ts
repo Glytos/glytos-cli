@@ -144,6 +144,86 @@ export function registerCampaigns(program: Command): void {
     );
 
   campaigns
+    .command('update <uuid>')
+    .description('Rename a campaign, or change when and within what hours it dials')
+    .option('--name <name>', 'New campaign name')
+    .option('--schedule <iso>', 'Start at a moment in the future (ISO 8601)')
+    .option('--clear-schedule', 'Remove the schedule, returning the campaign to a draft')
+    .option('--window <start-end>', 'Dialing hours, e.g. 09:00-20:00')
+    .option('--timezone <zone>', 'IANA zone the window is read in, e.g. Europe/Istanbul')
+    .action(
+      action(
+        async (
+          uuid: string,
+          opts: {
+            name?: string;
+            schedule?: string;
+            clearSchedule?: boolean;
+            window?: string;
+            timezone?: string;
+          },
+          command: Command,
+        ) => {
+          const flags = globalFlags(command);
+          if (opts.schedule && opts.clearSchedule) {
+            throw new CliError('--schedule and --clear-schedule ask for opposite things.');
+          }
+
+          const body: Record<string, unknown> = {};
+          if (opts.name) body.name = opts.name;
+          // Sending null clears the schedule; leaving the key out leaves it
+          // alone, so the two cases cannot share a code path.
+          if (opts.clearSchedule) body.scheduled_at = null;
+          else if (opts.schedule) body.scheduled_at = opts.schedule;
+          if (opts.window) {
+            const [start, end] = opts.window.split('-');
+            if (!start || !end) {
+              throw new CliError('--window takes a range, e.g. 09:00-20:00.');
+            }
+            body.call_window_start = start;
+            body.call_window_end = end;
+          }
+          if (opts.timezone) body.timezone = opts.timezone;
+          if (Object.keys(body).length === 0) {
+            throw new CliError('Nothing to change. Pass at least one option.');
+          }
+
+          const data = await makeClient(flags).campaigns.update(uuid, body);
+          flags.json ? printJson(data) : printObject(data);
+        },
+      ),
+    );
+
+  campaigns
+    .command('duplicate <uuid>')
+    .description('Copy a campaign and its contact list into a fresh draft; nothing dials')
+    .option('--name <name>', "Name for the copy; defaults to the original's")
+    .action(
+      action(async (uuid: string, opts: { name?: string }, command: Command) => {
+        const flags = globalFlags(command);
+        const data = await makeClient(flags).campaigns.duplicate(
+          uuid,
+          opts.name ? { name: opts.name } : {},
+        );
+        flags.json ? printJson(data) : printObject(data);
+      }),
+    );
+
+  campaigns
+    .command('export <uuid>')
+    .description('Print the contacts and their outcomes as CSV')
+    .action(
+      action(async (uuid: string, _opts: unknown, command: Command) => {
+        const flags = globalFlags(command);
+        const data = await makeClient(flags).campaigns.export(uuid);
+        // CSV goes to stdout as it arrived, so it can be piped or redirected.
+        // Wrapping it in a table would make the one format worth having here
+        // unusable by anything downstream.
+        process.stdout.write(typeof data === 'string' ? data : JSON.stringify(data) + '\n');
+      }),
+    );
+
+  campaigns
     .command('delete <uuid>')
     .description('Delete a campaign and its contact list')
     .action(

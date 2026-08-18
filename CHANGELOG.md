@@ -8,6 +8,11 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- `glytos campaigns update`, `duplicate` and `export`. `update` takes `--name`,
+  `--schedule`, `--clear-schedule`, `--window` and `--timezone`, and refuses a
+  call that would change nothing. `export` writes CSV to stdout unchanged, so it
+  can be piped or redirected.
+
 - `glytos suites list` and `glytos suites run <uuid>` - replay saved
   conversations against an agent. `run` exits non-zero when a case fails, so a
   pipeline can gate on it; the results are printed first either way.

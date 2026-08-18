@@ -111,6 +111,10 @@ glytos campaigns show <uuid>          # every contact and what became of it
 glytos campaigns start <uuid>
 glytos campaigns stop <uuid>          # ends at the next contact; the rest stay ready
 glytos campaigns add-contacts <uuid> --file more-leads.csv
+glytos campaigns update <uuid> --name "August outreach"
+glytos campaigns update <uuid> --clear-schedule   # back to a draft that waits for start
+glytos campaigns duplicate <uuid>     # same setup and list, fresh draft, nothing dials
+glytos campaigns export <uuid> > results.csv      # outcomes, one row per contact
 glytos campaigns delete <uuid>
 ```
 

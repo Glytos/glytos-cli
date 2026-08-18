@@ -178,6 +178,20 @@ class Campaigns {
     return this.client.request('DELETE', `/telephony/campaigns/${enc(uuid)}`);
   }
 
+  update(uuid: string, body: Record<string, unknown>): Promise<unknown> {
+    return this.client.request('PATCH', `/telephony/campaigns/${enc(uuid)}`, { body });
+  }
+
+  duplicate(uuid: string, body: Record<string, unknown>): Promise<unknown> {
+    return this.client.request('POST', `/telephony/campaigns/${enc(uuid)}/duplicate`, { body });
+  }
+
+  /** The contacts and their outcomes as CSV. `request` hands back a body it
+   *  cannot parse as JSON unchanged, so this arrives as text. */
+  export(uuid: string): Promise<unknown> {
+    return this.client.request('GET', `/telephony/campaigns/${enc(uuid)}/export`);
+  }
+
   addContacts(uuid: string, body: Record<string, unknown>): Promise<unknown> {
     return this.client.request('POST', `/telephony/campaigns/${enc(uuid)}/contacts/sync`, { body });
   }

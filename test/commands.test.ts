@@ -345,3 +345,68 @@ describe('trunks test', () => {
     expect(exitCode).toBe(1);
   });
 });
+
+describe('campaigns update, duplicate and export', () => {
+  it('update sends only the options it was given', async () => {
+    const { capture } = await run(
+      ['campaigns', 'update', 'camp_1', '--name', 'Renamed', '--json'],
+      '{"uuid":"camp_1","name":"Renamed"}',
+    );
+
+    expect(capture.request?.method).toBe('PATCH');
+    expect(new URL(capture.request!.url).pathname).toMatch(/\/telephony\/campaigns\/camp_1$/);
+    expect(await capture.request!.json()).toEqual({ name: 'Renamed' });
+  });
+
+  it('--clear-schedule sends the null that leaving the flag off cannot express', async () => {
+    const { capture } = await run(
+      ['campaigns', 'update', 'camp_1', '--clear-schedule', '--json'],
+      '{"uuid":"camp_1","status":"draft"}',
+    );
+
+    expect(await capture.request!.json()).toEqual({ scheduled_at: null });
+  });
+
+  it('refuses --schedule together with --clear-schedule', async () => {
+    const { exitCode, capture } = await run(
+      ['campaigns', 'update', 'camp_1', '--schedule', '2026-09-01T09:00:00Z', '--clear-schedule'],
+      '{}',
+    );
+
+    expect(exitCode).not.toBe(0);
+    // Refused before anything was sent, which is the point of checking here.
+    expect(capture.request).toBeUndefined();
+  });
+
+  it('refuses an update that would change nothing', async () => {
+    const { exitCode, capture } = await run(['campaigns', 'update', 'camp_1'], '{}');
+
+    expect(exitCode).not.toBe(0);
+    expect(capture.request).toBeUndefined();
+  });
+
+  it('duplicate posts to the campaign it copies', async () => {
+    const { capture } = await run(
+      ['campaigns', 'duplicate', 'camp_1', '--name', 'Second run', '--json'],
+      '{"uuid":"camp_2"}',
+    );
+
+    expect(capture.request?.method).toBe('POST');
+    expect(new URL(capture.request!.url).pathname).toMatch(
+      /\/telephony\/campaigns\/camp_1\/duplicate$/,
+    );
+    expect(await capture.request!.json()).toEqual({ name: 'Second run' });
+  });
+
+  it('export writes the CSV out unchanged so it can be piped', async () => {
+    const csv = ['phone,outcome,dialed_at,error,session_uuid', '+905551112233,answered,,,run-1', ''].join(
+      String.fromCharCode(10),
+    );
+    const { out, capture } = await run(['campaigns', 'export', 'camp_1'], csv);
+
+    expect(new URL(capture.request!.url).pathname).toMatch(
+      /\/telephony\/campaigns\/camp_1\/export$/,
+    );
+    expect(out).toBe(csv);
+  });
+});
